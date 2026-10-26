@@ -1,0 +1,147 @@
+// Prisma Schema for MnemioAI Cold-Email Automation Engine
+// Designed for high-volume (10,000+ contacts), strict idempotency, and full lifecycle tracking.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------------------------------------
+// Contact Model
+// Represents an individual prospect in the outreach campaign.
+// Tracks their exact state in the funnel, next scheduled action, and history.
+// -----------------------------------------------------------------------------
+model Contact {
+  id              String       @id @default(uuid()) @db.Uuid
+  email           String       @unique
+  name            String
+  company         String?
+  role            String
+  timezone        String       @default("UTC") // e.g. "America/New_York", "Europe/London", "Asia/Kolkata"
+
+  // Lifecycle status matching the assessment spec:
+  // - "new": Not contacted yet
+  // - "first_sent": First email sent, waiting for reply
+  // - "follow_up_1_sent": Follow-up 1 sent, waiting for reply
+  // - "follow_up_2_sent": Follow-up 2 sent, waiting for reply
+  // - "follow_up_3_sent": Follow-up 3 sent, waiting for reply
+  // - "replied": Prospect replied; sequence stopped
+  // - "bounced": Email bounced; sequence stopped
+  // - "unsubscribed": Asked not to be contacted; suppressed
+  // - "deactivated": All follow-ups sent with no reply within wait period
+  status          String       @default("new")
+
+  // Current step number: 0 = First email, 1 = Follow-up 1, 2 = Follow-up 2, 3 = Follow-up 3, -1 = Terminated/Complete
+  currentStep     Int          @default(0)
+
+  // Scheduling timestamps:
+  // nextActionAt is indexed so batch queries can instantly retrieve due contacts: WHERE status in (...) AND nextActionAt <= now
+  nextActionAt    DateTime?
+  lastContactedAt DateTime?
+
+  // Relations
+  emails          EmailLog[]
+  replies         ReplyLog[]
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Composite indexes for lightning-fast queries at 10,000+ scale
+  @@index([status, nextActionAt])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// EmailLog Model
+// Audit trail of every email sent to a contact.
+// -----------------------------------------------------------------------------
+model EmailLog {
+  id          String    @id @default(uuid()) @db.Uuid
+  contactId   String    @db.Uuid
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  // The sequence step (0 = First Email, 1 = Follow-up 1, 2 = Follow-up 2, 3 = Follow-up 3)
+  step        Int
+
+  subject     String
+  body        String    @db.Text
+  
+  // Status: "SENT" | "BOUNCED"
+  status      String    @default("SENT")
+
+  // Mailbox identifier used to send the message (supports warm-up tracking)
+  mailboxId   String?
+
+  sentAt      DateTime  @default(now())
+
+  // Hard database constraint guaranteeing strict idempotency:
+  // A contact can NEVER receive the same step twice!
+  @@unique([contactId, step])
+  @@index([sentAt])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// ReplyLog Model
+// Inbound simulated replies received from prospects.
+// -----------------------------------------------------------------------------
+model ReplyLog {
+  id             String    @id @default(uuid()) @db.Uuid
+  contactId      String    @db.Uuid
+  contact        Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  // AI-classified intent: "INTERESTED" | "NOT_INTERESTED" | "OUT_OF_OFFICE" | "UNSUBSCRIBE"
+  classification String
+
+  body           String    @db.Text
+  receivedAt     DateTime  @default(now())
+
+  @@index([contactId])
+  @@index([classification])
+}
+
+// -----------------------------------------------------------------------------
+// Suppression Model
+// Permanent suppression list for unsubscribed or hard-bounced addresses.
+// A contact on this list can NEVER be emailed again.
+// -----------------------------------------------------------------------------
+model Suppression {
+  id         String    @id @default(uuid()) @db.Uuid
+  email      String    @unique
+  reason     String    // "UNSUBSCRIBE" | "BOUNCE" | "MANUAL"
+  createdAt  DateTime  @default(now())
+
+  @@index([email])
+}
+
+// -----------------------------------------------------------------------------
+// VirtualClock Model
+// Stores the simulated "time machine" clock so all services, CLI scripts,
+// and worker runs stay synchronized without using system real-time.
+// -----------------------------------------------------------------------------
+model VirtualClock {
+  id           String    @id @default("singleton")
+  simulatedNow DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// Mailbox Model (Bonus: Mailbox Warm-Up & Spam Monitoring)
+// Tracks mock sender mailboxes, daily send quotas, and bounce rates.
+// -----------------------------------------------------------------------------
+model Mailbox {
+  id                 String    @id @default(uuid()) @db.Uuid
+  email              String    @unique
+  dailyLimit         Int       @default(50) // Ramped up over time
+  sentTodayCount     Int       @default(0)
+  totalSent          Int       @default(0)
+  totalBounced       Int       @default(0)
+  consecutiveBounces Int       @default(0)
+  isPaused           Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}

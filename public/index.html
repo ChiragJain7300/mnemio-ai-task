@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MnemioAI — Cold-Email Outreach Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="brand-logo">M</div>
+      <div class="brand-info">
+        <h1>MnemioAI Outreach</h1>
+        <span class="brand-subtitle">Cold-Email Automation Engine (10,000 Contacts)</span>
+      </div>
+    </div>
+    <div class="nav-clock" id="navClockContainer">
+      <span class="clock-label">VIRTUAL CLOCK:</span>
+      <span class="clock-time" id="clockTimeDisplay">Loading...</span>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+    <!-- Action Controls Bar -->
+    <section class="control-panel card">
+      <div class="control-title">
+        <h3>⚡ Campaign Controls</h3>
+        <p>Advance the simulated timeline, trigger sequence cadences, or simulate prospect replies in seconds.</p>
+      </div>
+      <div class="control-buttons">
+        <button class="btn btn-primary" id="btnRunSequence">
+          <span>🚀</span> Run Sequence Cycle
+        </button>
+        <button class="btn btn-secondary" id="btnAdvance3Days">
+          <span>⏩</span> Advance +3 Days
+        </button>
+        <button class="btn btn-secondary" id="btnAdvance7Days">
+          <span>⏩</span> Advance +7 Days
+        </button>
+        <button class="btn btn-outline" id="btnSimulateReplies">
+          <span>📬</span> Simulate Replies
+        </button>
+        <button class="btn btn-danger-outline" id="btnResetSeed">
+          <span>🔄</span> Reset 10k Seed
+        </button>
+      </div>
+      <div id="actionStatusMessage" class="action-status" style="display: none;"></div>
+    </section>
+
+    <!-- Top KPI Stat Cards -->
+    <section class="stats-grid">
+      <div class="stat-card card">
+        <div class="stat-header">
+          <span class="stat-title">Total Contacts</span>
+          <span class="stat-icon">👥</span>
+        </div>
+        <div class="stat-value" id="statTotalContacts">--</div>
+        <div class="stat-sub" id="statContactsBreakdown">10,000 enrolled prospects</div>
+      </div>
+
+      <div class="stat-card card">
+        <div class="stat-header">
+          <span class="stat-title">Queue Due Today</span>
+          <span class="stat-icon">📅</span>
+        </div>
+        <div class="stat-value" id="statDueToday">--</div>
+        <div class="stat-sub" id="statDueTomorrow">Due tomorrow: --</div>
+      </div>
+
+      <div class="stat-card card">
+        <div class="stat-header">
+          <span class="stat-title">Inbound Replies</span>
+          <span class="stat-icon">💬</span>
+        </div>
+        <div class="stat-value" id="statReplies">--</div>
+        <div class="stat-sub" id="statReplyRate">Reply rate: --%</div>
+      </div>
+
+      <div class="stat-card card">
+        <div class="stat-header">
+          <span class="stat-title">Deliverability & Bounces</span>
+          <span class="stat-icon">🛡️</span>
+        </div>
+        <div class="stat-value" id="statBounces">--</div>
+        <div class="stat-sub" id="statBounceRate">Bounce rate: --% (Suppressed: --)</div>
+      </div>
+    </section>
+
+    <!-- Funnel Breakdown Section -->
+    <section class="funnel-section card">
+      <div class="section-header">
+        <h3>📊 Lifecycle Funnel Distribution</h3>
+        <span class="section-tag" id="funnelActiveTag">Tracking 10,000 Contacts</span>
+      </div>
+      <div class="funnel-grid" id="funnelGrid">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- Two-Column Layout: Mailboxes & Contact Explorer -->
+    <div class="dashboard-columns">
+      <!-- Mailbox Warm-Up & Health -->
+      <section class="card mailbox-card">
+        <div class="section-header">
+          <h3>📬 Mailbox Warm-Up & Health</h3>
+          <span class="section-tag">Spam Guard Active</span>
+        </div>
+        <p class="section-subtext">Schedules sends across accounts with daily quotas to protect deliverability.</p>
+        <div class="mailbox-list" id="mailboxList">
+          <!-- Rendered by JS -->
+        </div>
+      </section>
+
+      <!-- Contact Directory & History Explorer -->
+      <section class="card contacts-card">
+        <div class="section-header">
+          <h3>🔍 Contact Explorer & Audit Trails</h3>
+          <span class="section-tag" id="contactsCountTag">10,000 Contacts</span>
+        </div>
+        <div class="filters-row">
+          <div class="search-box">
+            <input type="text" id="contactSearchInput" placeholder="Search by name, company, email, or role..." />
+          </div>
+          <div class="status-select-wrap">
+            <select id="contactStatusFilter">
+              <option value="ALL">All Statuses</option>
+              <option value="new">new</option>
+              <option value="first_sent">first_sent</option>
+              <option value="follow_up_1_sent">follow_up_1_sent</option>
+              <option value="follow_up_2_sent">follow_up_2_sent</option>
+              <option value="follow_up_3_sent">follow_up_3_sent</option>
+              <option value="replied">replied</option>
+              <option value="bounced">bounced</option>
+              <option value="unsubscribed">unsubscribed</option>
+              <option value="deactivated">deactivated</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="contacts-table">
+            <thead>
+              <tr>
+                <th>Contact</th>
+                <th>Company & Role</th>
+                <th>Status</th>
+                <th>Next Action</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="contactsTableBody">
+              <tr>
+                <td colspan="5" class="table-loading">Loading prospects...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-bar">
+          <button class="btn btn-sm btn-outline" id="btnPrevPage" disabled>← Previous</button>
+          <span class="page-indicator" id="pageIndicator">Page 1 of 1</span>
+          <button class="btn btn-sm btn-outline" id="btnNextPage" disabled>Next →</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Contact Audit Trail Modal -->
+  <div class="modal-backdrop" id="contactModalBackdrop" style="display: none;">
+    <div class="modal-content card">
+      <div class="modal-header">
+        <div>
+          <h3 id="modalContactName">Contact Details</h3>
+          <span class="modal-subtitle" id="modalContactMeta">email@company.com</span>
+        </div>
+        <button class="modal-close-btn" id="modalCloseBtn">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="contact-badges-row" id="modalBadges"></div>
+
+        <h4>📨 Email History & Cadence Logs</h4>
+        <div class="timeline" id="modalEmailTimeline">
+          <!-- Rendered by JS -->
+        </div>
+
+        <h4 style="margin-top: 24px;">💬 Inbound Replies</h4>
+        <div class="timeline" id="modalReplyTimeline">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
